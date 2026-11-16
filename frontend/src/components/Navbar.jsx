@@ -4,7 +4,18 @@
 
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Camera, LogOut, User, LogIn, UserPlus, Trash2, AlertTriangle, Loader2 } from 'lucide-react';
+import {
+  Camera,
+  LogOut,
+  User,
+  LogIn,
+  UserPlus,
+  Trash2,
+  AlertTriangle,
+  Loader2,
+  Menu,
+  X,
+} from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export default function Navbar() {
@@ -14,6 +25,7 @@ export default function Navbar() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState('');
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const handleDeleteAccount = async () => {
     setIsDeleting(true);
@@ -41,6 +53,7 @@ export default function Navbar() {
         }}
       >
         <div
+          className="site-header-inner"
           style={{
             maxWidth: '1200px',
             margin: '0 auto',
@@ -53,6 +66,7 @@ export default function Navbar() {
         >
           <Link
             to="/"
+            onClick={() => setIsMenuOpen(false)}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -67,49 +81,37 @@ export default function Navbar() {
             <span>PhotoDrop</span>
           </Link>
 
-          <nav style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+          <nav
+            id="site-navigation"
+            className={`site-navigation${isMenuOpen ? ' is-open' : ''}`}
+            aria-label="Main navigation"
+          >
             {isAuthenticated ? (
               <>
                 <Link
                   to="/events"
-                  style={{
-                    color: 'var(--color-text)',
-                    textDecoration: 'none',
-                    fontSize: '0.875rem',
-                    fontWeight: 500,
-                    marginRight: 'var(--space-2)',
-                  }}
+                  className="site-nav-link"
+                  onClick={() => setIsMenuOpen(false)}
                 >
                   Events
                 </Link>
 
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 'var(--space-2)',
-                    fontSize: '0.875rem',
-                    color: 'var(--color-text-muted)',
-                  }}
+                <Link
+                  to="/profile"
+                  className="site-nav-link"
+                  onClick={() => setIsMenuOpen(false)}
+                  style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
                 >
                   <User size={16} />
-                  <span
-                    style={{
-                      maxWidth: '160px',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                      color: 'var(--color-text)',
-                      fontWeight: 500,
-                    }}
-                  >
-                    {user?.display_name || user?.email}
-                  </span>
-                </div>
+                  <span>{user?.display_name || user?.email}</span>
+                </Link>
 
                 <button
                   type="button"
-                  onClick={() => setShowDeleteModal(true)}
+                  onClick={() => {
+                    setIsMenuOpen(false);
+                    setShowDeleteModal(true);
+                  }}
                   className="btn btn-secondary"
                   style={{
                     padding: '0.375rem 0.625rem',
@@ -124,7 +126,10 @@ export default function Navbar() {
 
                 <button
                   type="button"
-                  onClick={logout}
+                  onClick={() => {
+                    setIsMenuOpen(false);
+                    logout();
+                  }}
                   className="btn btn-secondary"
                   style={{ padding: '0.375rem 0.75rem', fontSize: '0.8125rem' }}
                   aria-label="Log out"
@@ -138,6 +143,7 @@ export default function Navbar() {
                 <Link
                   to="/login"
                   className="btn btn-secondary"
+                  onClick={() => setIsMenuOpen(false)}
                   style={{ padding: '0.375rem 0.75rem', fontSize: '0.8125rem' }}
                 >
                   <LogIn size={14} />
@@ -146,6 +152,7 @@ export default function Navbar() {
                 <Link
                   to="/register"
                   className="btn btn-primary"
+                  onClick={() => setIsMenuOpen(false)}
                   style={{ padding: '0.375rem 0.75rem', fontSize: '0.8125rem' }}
                 >
                   <UserPlus size={14} />
@@ -154,6 +161,17 @@ export default function Navbar() {
               </>
             )}
           </nav>
+
+          <button
+            type="button"
+            className="btn btn-secondary site-nav-toggle"
+            aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
+            aria-expanded={isMenuOpen}
+            aria-controls="site-navigation"
+            onClick={() => setIsMenuOpen((open) => !open)}
+          >
+            {isMenuOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
         </div>
       </header>
 

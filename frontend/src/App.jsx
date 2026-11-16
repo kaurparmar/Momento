@@ -12,6 +12,7 @@ import CreateEvent from './pages/CreateEvent';
 import JoinEvent from './pages/JoinEvent';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import Profile from './pages/Profile';
 import Privacy from './pages/Privacy';
 import Terms from './pages/Terms';
 import NotFound from './pages/NotFound';
@@ -65,6 +66,14 @@ export default function App() {
                 element={
                   <ProtectedRoute>
                     <Events />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/profile"
+                element={
+                  <ProtectedRoute>
+                    <Profile />
                   </ProtectedRoute>
                 }
               />

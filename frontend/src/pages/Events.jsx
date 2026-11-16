@@ -14,6 +14,7 @@ import {
   FolderPlus,
   KeyRound,
   Shield,
+  Search,
 } from 'lucide-react';
 import { api } from '../api';
 import CreateEvent from './CreateEvent';
@@ -57,6 +58,7 @@ export default function Events() {
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [joinError, setJoinError] = useState('');
   const [isJoining, setIsJoining] = useState(false);
+  const [eventSearch, setEventSearch] = useState('');
 
   // Fetch list of events the logged-in user belongs to
   useEffect(() => {
@@ -98,6 +100,25 @@ export default function Events() {
 
   const selectedEvent = events.find(
     (e) => String(e.id || e.pk) === String(selectedEventId)
+  );
+  const searchTerm = eventSearch.trim().toLowerCase();
+  const filteredEvents = events.filter((event) =>
+    `${event.name || ''} ${event.description || ''}`.toLowerCase().includes(searchTerm)
+  );
+
+  const renderEventSearch = (id) => (
+    <div className="event-search">
+      <Search size={16} aria-hidden="true" />
+      <input
+        id={id}
+        className="input"
+        type="search"
+        aria-label="Search events by name or description"
+        placeholder="Search events"
+        value={eventSearch}
+        onChange={(event) => setEventSearch(event.target.value)}
+      />
+    </div>
   );
 
   // Copy full invite link to clipboard without QR codes
@@ -207,45 +228,52 @@ export default function Events() {
         </div>
 
         {events.length > 0 && (
-          <div
-            style={{
-              display: 'flex',
-              gap: 'var(--space-2)',
-              overflowX: 'auto',
-              paddingBottom: 'var(--space-1)',
-            }}
-          >
-            {events.map((evt) => {
-              const evtId = evt.id || evt.pk;
-              const isSelected = !isCreating && String(selectedEventId) === String(evtId);
-              return (
-                <button
-                  key={evtId}
-                  type="button"
-                  onClick={() => {
-                    setIsCreating(false);
-                    setSelectedEventId(evtId);
-                    navigate(`/events/${evtId}`);
-                  }}
-                  style={{
-                    flexShrink: 0,
-                    padding: '0.375rem 0.75rem',
-                    borderRadius: 'var(--radius-md)',
-                    border: '1px solid',
-                    borderColor: isSelected ? 'var(--color-accent)' : 'var(--color-border)',
-                    backgroundColor: isSelected ? 'var(--color-accent)' : 'var(--color-bg)',
-                    color: isSelected ? 'var(--color-accent-fg)' : 'var(--color-text)',
-                    fontSize: '0.8125rem',
-                    fontWeight: isSelected ? 600 : 500,
-                    cursor: 'pointer',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {evt.name}
-                </button>
-              );
-            })}
-          </div>
+          <>
+            {renderEventSearch('mobile-event-search')}
+            {filteredEvents.length > 0 ? (
+              <div
+                style={{
+                  display: 'flex',
+                  gap: 'var(--space-2)',
+                  overflowX: 'auto',
+                  paddingBottom: 'var(--space-1)',
+                }}
+              >
+                {filteredEvents.map((evt) => {
+                  const evtId = evt.id || evt.pk;
+                  const isSelected = !isCreating && String(selectedEventId) === String(evtId);
+                  return (
+                    <button
+                      key={evtId}
+                      type="button"
+                      onClick={() => {
+                        setIsCreating(false);
+                        setSelectedEventId(evtId);
+                        navigate(`/events/${evtId}`);
+                      }}
+                      style={{
+                        flexShrink: 0,
+                        padding: '0.375rem 0.75rem',
+                        borderRadius: 'var(--radius-md)',
+                        border: '1px solid',
+                        borderColor: isSelected ? 'var(--color-accent)' : 'var(--color-border)',
+                        backgroundColor: isSelected ? 'var(--color-accent)' : 'var(--color-bg)',
+                        color: isSelected ? 'var(--color-accent-fg)' : 'var(--color-text)',
+                        fontSize: '0.8125rem',
+                        fontWeight: isSelected ? 600 : 500,
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {evt.name}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="event-search-empty">No events match your search.</p>
+            )}
+          </>
         )}
       </div>
 
@@ -354,8 +382,23 @@ export default function Events() {
               </div>
             )}
 
+            {!loading && events.length > 0 && (
+              <div className="event-search event-search-sidebar">
+                <Search size={16} aria-hidden="true" />
+                <input
+                  id="desktop-event-search"
+                  className="input"
+                  type="search"
+                  aria-label="Search events by name or description"
+                  placeholder="Search events"
+                  value={eventSearch}
+                  onChange={(event) => setEventSearch(event.target.value)}
+                />
+              </div>
+            )}
+
             {!loading &&
-              events.map((evt) => {
+              filteredEvents.map((evt) => {
                 const evtId = evt.id || evt.pk;
                 const isSelected = !isCreating && String(selectedEventId) === String(evtId);
                 const dates = formatDateRange(evt.start_date, evt.end_date);
@@ -451,6 +494,10 @@ export default function Events() {
                   </button>
                 );
               })}
+
+            {!loading && events.length > 0 && filteredEvents.length === 0 && (
+              <p className="event-search-empty">No events match your search.</p>
+            )}
           </div>
         </aside>
 

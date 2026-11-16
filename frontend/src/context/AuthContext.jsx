@@ -67,6 +67,13 @@ export function AuthProvider({ children }) {
     setUser(null);
   };
 
+  // Save profile changes and keep the shared user state in sync.
+  const updateProfile = async (displayName) => {
+    const updatedUser = await api.patch('/auth/me/', { display_name: displayName });
+    setUser(updatedUser);
+    return updatedUser;
+  };
+
   const value = {
     user,
     loading,
@@ -74,6 +81,7 @@ export function AuthProvider({ children }) {
     login,
     register,
     logout,
+    updateProfile,
     deleteAccount,
   };
 
