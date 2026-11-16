@@ -2,85 +2,70 @@
 
 A web app where a group creates an event, shares an invite link, everyone uploads photos at full quality, and anyone can filter, select and download them.
 
-**Stack:** Django 5 + Django REST Framework + MongoDB (MongoEngine) / React + Vite + Tailwind CSS
+**Stack:** Django 5, Django REST Framework, MongoDB with MongoEngine, React, Vite and Tailwind CSS.
 
----
+## Prerequisites
 
-## Project layout
+- Python 3.10 or newer
+- Node.js 20.19 or newer
+- A MongoDB instance, either local or MongoDB Atlas
 
-```
-.
-├── backend/     Django API
-└── frontend/    React client
-```
+## Start the project
 
----
+Install the backend and frontend dependencies once. From the project root, open two terminals.
 
-## Running the backend
+### Terminal 1: Backend
 
-```bash
+```powershell
 cd backend
-
-# First time only: create and activate the virtualenv, then install deps
-python -m venv venv
-venv\Scripts\activate          # Windows
-# source venv/bin/activate     # macOS / Linux
-
-pip install -r requirements.txt
-
-# Copy the example env file and fill in your values
-copy .env.example .env         # Windows
-# cp .env.example .env         # macOS / Linux
-
-# Start the dev server (requires a running MongoDB instance)
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+Copy-Item .env.example .env
 python manage.py runserver
 ```
 
+If PowerShell prevents virtual environment activation, run `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass` in that terminal, then activate it again.
+
 The API will be available at `http://localhost:8000`.
 
----
+### Terminal 2: Frontend
 
-## Running the frontend
-
-```bash
+```powershell
 cd frontend
-npm install
+npm ci
 npm run dev
 ```
 
-The app will be available at `http://localhost:5173`.
+Open `http://localhost:5173`. Vite forwards `/api` and `/media` requests to the backend on port 8000.
 
----
+## MongoDB configuration
 
-## Running backend tests
+The development environment reads `MONGO_URI` from `backend/.env`. The example points to a local MongoDB server:
 
-```bash
-cd backend
-venv\Scripts\activate
-pip install pytest pytest-django
-pytest
-```
-
----
-
-## MongoDB
-
-The app uses MongoDB in all environments. Set `MONGO_URI` in `backend/.env`:
-
-```
+```text
 MONGO_URI=mongodb://localhost:27017/photodrop_dev
 ```
 
-For production, point this at your MongoDB Atlas cluster URI.
+Start your local MongoDB service before using the app, or change `MONGO_URI` to your MongoDB Atlas connection string. The application creates its database when it first writes data. The example secret is for local development only and must be replaced before deployment.
 
----
+## Run backend tests
 
-## Environment variables (backend)
+Activate the backend virtual environment, then run:
 
-| Variable              | Required | Description                              |
-|-----------------------|----------|------------------------------------------|
-| `SECRET_KEY`          | Yes      | Django secret key                        |
-| `DEBUG`               | No       | `True` in development, omit in production|
-| `MONGO_URI`           | Yes      | Full MongoDB connection string           |
-| `ALLOWED_HOSTS`       | No       | Comma-separated list of allowed hosts    |
-| `CORS_ALLOWED_ORIGINS`| No       | Comma-separated list of allowed origins  |
+```powershell
+cd backend
+.\.venv\Scripts\Activate.ps1
+python -m pytest
+```
+
+Tests use an in-memory MongoDB mock and do not require a running MongoDB server.
+
+## Build the frontend
+
+```powershell
+cd frontend
+npm run build
+```
+
+The production files are written to `frontend/dist/`.
