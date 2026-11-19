@@ -124,7 +124,7 @@ export default function Events() {
   // Copy full invite link to clipboard without QR codes
   const handleCopyInviteLink = (inviteCode) => {
     if (!inviteCode) return;
-    const inviteUrl = `${window.location.origin}/join/${inviteCode}`;
+    const inviteUrl = `${inviteCode}`;
     navigator.clipboard.writeText(inviteUrl);
     setCopiedCode(inviteCode);
     setTimeout(() => {
