@@ -245,6 +245,13 @@ Clicking the count opens a scrollable members modal:
 - Repeated opens display only one member section.
 - Regular members do not see the owner-only member control.
 
+## Error Pages
+
+Unknown frontend routes display a custom 404 page.
+
+API responses in the 500 to 599 range open a custom 500 page.
+The 500 page provides options to reload the current request or return home.
+
 ## 9. Upload Flow
 
 The photo upload flow is:

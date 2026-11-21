@@ -21,6 +21,7 @@ filter, select, and download photos.
 - Use light or dark mode with a manual theme toggle.
 - Use a right-side mobile navigation drawer with a blurred, blocked backdrop.
 - View the event members list in a scrollable modal section for owners.
+- Use custom 404 and 500 pages for missing routes and server failures.
 
 ## Technology
 
@@ -85,6 +86,7 @@ Open `http://localhost:5173`. The Vite configuration forwards `/api` and `/media
 - `/login` and `/register` for authentication.
 - `/profile` for account details.
 - `/privacy` and `/terms` for legal pages.
+- `/500` for the server error page.
 
 ### Backend API
 

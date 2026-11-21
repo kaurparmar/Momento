@@ -16,6 +16,7 @@ import Profile from './pages/Profile';
 import Privacy from './pages/Privacy';
 import Terms from './pages/Terms';
 import NotFound from './pages/NotFound';
+import ServerError from './pages/ServerError';
 import './index.css';
 
 // Root route displaying the Events dashboard for logged-in users, or the landing hero for guests
@@ -82,6 +83,7 @@ export default function App() {
               <Route path="/register" element={<Register />} />
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/terms" element={<Terms />} />
+              <Route path="/500" element={<ServerError />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </main>

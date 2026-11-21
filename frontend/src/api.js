@@ -87,6 +87,12 @@ export async function apiRequest(endpoint, options = {}) {
   const url = endpoint.startsWith('http') ? endpoint : `${API_BASE}${endpoint}`;
   const response = await fetch(url, config);
 
+  if (response.status >= 500 && response.status < 600 && typeof window !== 'undefined') {
+    if (window.location.pathname !== '/500') {
+      window.location.assign('/500');
+    }
+  }
+
   // If unauthorized and we have a refresh token, try refreshing the access token once
   if (response.status === 401 && !options._isRetry) {
     const { refresh } = getStoredTokens();
