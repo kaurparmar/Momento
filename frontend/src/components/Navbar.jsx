@@ -2,7 +2,7 @@
 // Adapts cleanly between mobile screens (360px) and wide desktop displays (1600px).
 // Includes an account deletion option with confirmation modal.
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Camera,
@@ -28,6 +28,27 @@ export default function Navbar() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState('');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  useEffect(() => {
+    if (!isMenuOpen) {
+      return undefined;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const closeOnEscape = (event) => {
+      if (event.key === 'Escape') {
+        setIsMenuOpen(false);
+      }
+    };
+
+    window.addEventListener('keydown', closeOnEscape);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', closeOnEscape);
+    };
+  }, [isMenuOpen]);
 
   const handleDeleteAccount = async () => {
     setIsDeleting(true);
@@ -88,6 +109,18 @@ export default function Navbar() {
             className={`site-navigation${isMenuOpen ? ' is-open' : ''}`}
             aria-label="Main navigation"
           >
+            <div className="mobile-nav-drawer-header">
+              <span>Menu</span>
+              <button
+                type="button"
+                className="btn btn-secondary mobile-nav-close"
+                aria-label="Close menu"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
             <button
               type="button"
               className="btn theme-toggle"
@@ -186,6 +219,16 @@ export default function Navbar() {
           </button>
         </div>
       </header>
+
+      {isMenuOpen && (
+        <button
+          type="button"
+          className="mobile-nav-backdrop"
+          aria-label="Close navigation menu"
+          onClick={() => setIsMenuOpen(false)}
+          tabIndex={-1}
+        />
+      )}
 
       {/* Delete Account Confirmation Modal */}
       {showDeleteModal && (

@@ -17,6 +17,7 @@ import {
   Search,
   UserMinus,
   UserRound,
+  X,
 } from 'lucide-react';
 import { api } from '../api';
 import CreateEvent from './CreateEvent';
@@ -44,11 +45,31 @@ function formatDateRange(startDate, endDate) {
   return `Ending ${new Date(endDate).toLocaleDateString(undefined, options)}`;
 }
 
-function EventMembersPanel({ eventId, eventName, onMemberRevoked }) {
+function dedupeEvents(events) {
+  const uniqueEvents = new Map();
+  events.forEach((event) => {
+    const eventId = event.id || event.pk;
+    if (eventId) {
+      uniqueEvents.set(String(eventId), event);
+    }
+  });
+  return Array.from(uniqueEvents.values());
+}
+
+function EventMembersPanel({ eventId, eventName, onMemberRevoked, onClose }) {
   const [members, setMembers] = useState([]);
   const [membersLoading, setMembersLoading] = useState(true);
   const [membersError, setMembersError] = useState('');
   const [revokingMemberId, setRevokingMemberId] = useState(null);
+
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -97,110 +118,82 @@ function EventMembersPanel({ eventId, eventName, onMemberRevoked }) {
   };
 
   return (
-    <section
-      aria-labelledby="event-members-heading"
-      style={{
-        marginBottom: 'var(--space-6)',
-        padding: 'var(--space-4)',
-        border: '1px solid var(--color-border)',
-        borderRadius: 'var(--radius-md)',
-        backgroundColor: 'var(--color-bg)',
-      }}
-    >
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 'var(--space-3)',
-          marginBottom: 'var(--space-3)',
-        }}
-      >
-        <h2
-          id="event-members-heading"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 'var(--space-2)',
-            margin: 0,
-            fontSize: '1rem',
-            fontWeight: 600,
-            color: 'var(--color-text)',
-          }}
-        >
-          <Users size={18} />
-          Members ({members.length})
-        </h2>
-      </div>
-
-      {membersError && (
-        <div role="alert" style={{ color: 'var(--color-danger)', fontSize: '0.8125rem', marginBottom: 'var(--space-3)' }}>
-          {membersError}
+    <div className="event-members-overlay" role="dialog" aria-modal="true" aria-labelledby="event-members-heading">
+      <button
+        type="button"
+        className="event-members-backdrop"
+        aria-label="Close members"
+        onClick={onClose}
+        tabIndex={-1}
+      />
+      <section className="event-members-modal">
+        <div className="event-members-modal-header">
+          <h2 id="event-members-heading">
+            <Users size={18} />
+            Members ({members.length})
+          </h2>
+          <button
+            type="button"
+            className="btn btn-secondary event-members-close"
+            onClick={onClose}
+            aria-label="Close members"
+            title="Close members"
+          >
+            <X size={16} />
+          </button>
         </div>
-      )}
 
-      {membersLoading ? (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>
-          <Loader2 size={16} className="animate-spin" />
-          <span>Loading members...</span>
-        </div>
-      ) : (
-        <div style={{ display: 'grid', gap: 'var(--space-2)' }}>
-          {members.map((member) => (
-            <div
-              key={member.user_id}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: 'var(--space-3)',
-                padding: 'var(--space-2) 0',
-                borderTop: '1px solid var(--color-border)',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', minWidth: 0 }}>
-                <UserRound size={18} style={{ flexShrink: 0, color: 'var(--color-text-muted)' }} />
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ color: 'var(--color-text)', fontSize: '0.875rem', fontWeight: 500 }}>
-                    {member.display_name || member.email}
-                    {member.role === 'owner' && (
-                      <span style={{ color: 'var(--color-text-muted)', fontWeight: 400 }}> (owner)</span>
-                    )}
-                  </div>
-                  <div style={{ color: 'var(--color-text-muted)', fontSize: '0.75rem', overflowWrap: 'anywhere' }}>
-                    {member.email}
-                  </div>
-                </div>
-              </div>
-
-              {member.role !== 'owner' && (
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  aria-label={`Revoke access for ${member.display_name || member.email}`}
-                  title="Revoke access"
-                  disabled={revokingMemberId !== null}
-                  onClick={() => handleRevokeMember(member)}
-                  style={{
-                    flexShrink: 0,
-                    padding: '0.375rem 0.625rem',
-                    fontSize: '0.75rem',
-                    color: 'var(--color-danger)',
-                  }}
-                >
-                  {revokingMemberId === member.user_id ? (
-                    <Loader2 size={14} className="animate-spin" />
-                  ) : (
-                    <UserMinus size={14} />
-                  )}
-                  <span>Revoke</span>
-                </button>
-              )}
+        <div className="event-members-modal-body">
+          {membersError && (
+            <div role="alert" className="event-members-error">
+              {membersError}
             </div>
-          ))}
+          )}
+
+          {membersLoading ? (
+            <div className="event-members-loading">
+              <Loader2 size={16} className="animate-spin" />
+              <span>Loading members...</span>
+            </div>
+          ) : (
+            <div className="event-members-list">
+              {members.map((member) => (
+                <div key={member.user_id} className="event-member-row">
+                  <div className="event-member-info">
+                    <UserRound size={18} />
+                    <div>
+                      <div className="event-member-name">
+                        {member.display_name || member.email}
+                        {member.role === 'owner' && <span> (owner)</span>}
+                      </div>
+                      <div className="event-member-email">{member.email}</div>
+                    </div>
+                  </div>
+
+                  {member.role !== 'owner' && (
+                    <button
+                      type="button"
+                      className="btn btn-secondary event-member-revoke"
+                      aria-label={`Revoke access for ${member.display_name || member.email}`}
+                      title="Revoke access"
+                      disabled={revokingMemberId !== null}
+                      onClick={() => handleRevokeMember(member)}
+                    >
+                      {revokingMemberId === member.user_id ? (
+                        <Loader2 size={14} className="animate-spin" />
+                      ) : (
+                        <UserMinus size={14} />
+                      )}
+                      <span>Revoke</span>
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
-      )}
-    </section>
+      </section>
+    </div>
   );
 }
 
@@ -221,6 +214,7 @@ export default function Events() {
   const [joinError, setJoinError] = useState('');
   const [isJoining, setIsJoining] = useState(false);
   const [eventSearch, setEventSearch] = useState('');
+  const [showMembersEventId, setShowMembersEventId] = useState(null);
 
   // Fetch list of events the logged-in user belongs to
   useEffect(() => {
@@ -232,7 +226,7 @@ export default function Events() {
       try {
         const data = await api.get('/events/');
         if (isMounted) {
-          const list = Array.isArray(data) ? data : [];
+          const list = dedupeEvents(Array.isArray(data) ? data : []);
           setEvents(list);
 
           // If a route param was provided, select it; otherwise select the first event
@@ -260,6 +254,23 @@ export default function Events() {
     };
   }, [routeEventId]);
 
+  useEffect(() => {
+    if (!showMembersEventId) {
+      return undefined;
+    }
+
+    const closeMembersOnEscape = (event) => {
+      if (event.key === 'Escape') {
+        setShowMembersEventId(null);
+        document.querySelector('.event-members-overlay')?.remove();
+        document.body.style.overflow = '';
+      }
+    };
+
+    window.addEventListener('keydown', closeMembersOnEscape);
+    return () => window.removeEventListener('keydown', closeMembersOnEscape);
+  }, [showMembersEventId]);
+
   const selectedEvent = events.find(
     (e) => String(e.id || e.pk) === String(selectedEventId)
   );
@@ -267,6 +278,12 @@ export default function Events() {
   const filteredEvents = events.filter((event) =>
     `${event.name || ''} ${event.description || ''}`.toLowerCase().includes(searchTerm)
   );
+
+  const closeMembers = () => {
+    setShowMembersEventId(null);
+    document.querySelector('.event-members-overlay')?.remove();
+    document.body.style.overflow = '';
+  };
 
   const renderEventSearch = (id) => (
     <div className="event-search">
@@ -296,7 +313,7 @@ export default function Events() {
 
   // Callback when a new event is created
   const handleEventCreated = (newEvent) => {
-    setEvents((prev) => [newEvent, ...prev]);
+    setEvents((prev) => dedupeEvents([newEvent, ...prev]));
     const newId = newEvent.id || newEvent.pk;
     setSelectedEventId(newId);
     setIsCreating(false);
@@ -321,7 +338,7 @@ export default function Events() {
 
       // Refresh events list
       const updatedEvents = await api.get('/events/');
-      setEvents(updatedEvents);
+      setEvents(dedupeEvents(Array.isArray(updatedEvents) ? updatedEvents : []));
 
       const targetId = response.event?.id || response.event?.pk;
       if (targetId) {
@@ -744,13 +761,36 @@ export default function Events() {
                         color: 'var(--color-text-muted)',
                       }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-1)' }}>
-                        <Users size={16} />
-                        <span>
-                          {selectedEvent.member_count || 1}{' '}
-                          {selectedEvent.member_count === 1 ? 'member' : 'members'}
-                        </span>
-                      </div>
+                      {selectedEvent.my_role === 'owner' ? (
+                        <button
+                          type="button"
+                          className="event-members-trigger"
+                          title="See members"
+                          aria-label={`See members of ${selectedEvent.name}`}
+                          aria-expanded={showMembersEventId === (selectedEvent.id || selectedEvent.pk)}
+                          onClick={() =>
+                            setShowMembersEventId((openEventId) =>
+                              openEventId === (selectedEvent.id || selectedEvent.pk)
+                                ? null
+                                : (selectedEvent.id || selectedEvent.pk)
+                            )
+                          }
+                        >
+                          <Users size={16} />
+                          <span>
+                            {selectedEvent.member_count || 1}{' '}
+                            {selectedEvent.member_count === 1 ? 'member' : 'members'}
+                          </span>
+                        </button>
+                      ) : (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-1)' }}>
+                          <Users size={16} />
+                          <span>
+                            {selectedEvent.member_count || 1}{' '}
+                            {selectedEvent.member_count === 1 ? 'member' : 'members'}
+                          </span>
+                        </div>
+                      )}
 
                       {formatDateRange(selectedEvent.start_date, selectedEvent.end_date) && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-1)' }}>
@@ -809,11 +849,13 @@ export default function Events() {
                 )}
               </div>
 
-              {selectedEvent.my_role === 'owner' && (
+              {selectedEvent.my_role === 'owner' &&
+                showMembersEventId === (selectedEvent.id || selectedEvent.pk) && (
                 <EventMembersPanel
                   key={selectedEvent.id || selectedEvent.pk}
                   eventId={selectedEvent.id || selectedEvent.pk}
                   eventName={selectedEvent.name}
+                  onClose={closeMembers}
                   onMemberRevoked={(eventId, inviteCode) =>
                     setEvents((previous) =>
                       previous.map((event) => {
