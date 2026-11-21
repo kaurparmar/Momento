@@ -18,6 +18,8 @@ import {
   UserMinus,
   UserRound,
   X,
+  Pencil,
+  Trash2,
 } from 'lucide-react';
 import { api } from '../api';
 import CreateEvent from './CreateEvent';
@@ -215,6 +217,13 @@ export default function Events() {
   const [isJoining, setIsJoining] = useState(false);
   const [eventSearch, setEventSearch] = useState('');
   const [showMembersEventId, setShowMembersEventId] = useState(null);
+  const [showRenameModal, setShowRenameModal] = useState(false);
+  const [eventNameInput, setEventNameInput] = useState('');
+  const [renameError, setRenameError] = useState('');
+  const [isRenaming, setIsRenaming] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Fetch list of events the logged-in user belongs to
   useEffect(() => {
@@ -271,6 +280,28 @@ export default function Events() {
     return () => window.removeEventListener('keydown', closeMembersOnEscape);
   }, [showMembersEventId]);
 
+  useEffect(() => {
+    if (!showRenameModal && !showDeleteModal) {
+      return undefined;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const closeManagementModal = (event) => {
+      if (event.key === 'Escape') {
+        setShowRenameModal(false);
+        setShowDeleteModal(false);
+      }
+    };
+
+    window.addEventListener('keydown', closeManagementModal);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', closeManagementModal);
+    };
+  }, [showRenameModal, showDeleteModal]);
+
   const selectedEvent = events.find(
     (e) => String(e.id || e.pk) === String(selectedEventId)
   );
@@ -309,6 +340,70 @@ export default function Events() {
     setTimeout(() => {
       setCopiedCode(null);
     }, 2000);
+  };
+
+  const openRenameModal = () => {
+    setEventNameInput(selectedEvent.name);
+    setRenameError('');
+    setShowRenameModal(true);
+  };
+
+  const handleRenameEvent = async (e) => {
+    e.preventDefault();
+    const cleanName = eventNameInput.trim();
+    if (!cleanName) {
+      setRenameError('Event name is required.');
+      return;
+    }
+
+    setIsRenaming(true);
+    setRenameError('');
+    try {
+      const updatedEvent = await api.patch(`/events/${selectedEventId}/`, { name: cleanName });
+      setEvents((previous) =>
+        dedupeEvents(
+          previous.map((event) => {
+            const eventId = event.id || event.pk;
+            return String(eventId) === String(selectedEventId) ? updatedEvent : event;
+          })
+        )
+      );
+      setShowRenameModal(false);
+    } catch (err) {
+      setRenameError(err.message || 'Failed to rename event.');
+    } finally {
+      setIsRenaming(false);
+    }
+  };
+
+  const handleDeleteEvent = async () => {
+    setIsDeleting(true);
+    setDeleteError('');
+    try {
+      await api.delete(`/events/${selectedEventId}/`);
+      const remainingEvents = dedupeEvents(
+        events.filter((event) => {
+          const eventId = event.id || event.pk;
+          return String(eventId) !== String(selectedEventId);
+        })
+      );
+      setEvents(remainingEvents);
+      setShowDeleteModal(false);
+      setShowMembersEventId(null);
+
+      if (remainingEvents.length > 0) {
+        const nextEventId = remainingEvents[0].id || remainingEvents[0].pk;
+        setSelectedEventId(nextEventId);
+        navigate(`/events/${nextEventId}`);
+      } else {
+        setSelectedEventId(null);
+        navigate('/events');
+      }
+    } catch (err) {
+      setDeleteError(err.message || 'Failed to delete event.');
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   // Callback when a new event is created
@@ -812,6 +907,33 @@ export default function Events() {
 
                   {/* Copy Invite Link Action Button */}
                   <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                    {selectedEvent.my_role === 'owner' && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={openRenameModal}
+                          className="btn btn-secondary"
+                          style={{ padding: '0.5rem 0.875rem', fontSize: '0.8125rem' }}
+                          title="Rename event"
+                        >
+                          <Pencil size={16} />
+                          <span>Rename</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setDeleteError('');
+                            setShowDeleteModal(true);
+                          }}
+                          className="btn btn-secondary"
+                          style={{ padding: '0.5rem 0.875rem', fontSize: '0.8125rem', color: 'var(--color-danger)' }}
+                          title="Delete event"
+                        >
+                          <Trash2 size={16} />
+                          <span>Delete</span>
+                        </button>
+                      </>
+                    )}
                     <button
                       type="button"
                       onClick={() => handleCopyInviteLink(selectedEvent.invite_code)}
@@ -953,6 +1075,129 @@ export default function Events() {
           )}
         </main>
       </div>
+
+      {showRenameModal && selectedEvent && (
+        <div className="event-management-overlay" role="dialog" aria-modal="true" aria-labelledby="rename-event-heading">
+          <button
+            type="button"
+            className="event-management-backdrop"
+            aria-label="Close rename event"
+            onClick={() => setShowRenameModal(false)}
+            tabIndex={-1}
+          />
+          <form className="event-management-modal" onSubmit={handleRenameEvent}>
+            <div className="event-management-header p-7">
+              <div>
+                <h2 id="rename-event-heading">Rename event</h2>
+                <p>Change the name shown in this shared album.</p>
+              </div>
+              <button
+                type="button"
+                className="btn btn-secondary event-members-close"
+                onClick={() => setShowRenameModal(false)}
+                aria-label="Close rename event"
+                disabled={isRenaming}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="event-management-body p-7">
+              {renameError && (
+                <div role="alert" className="event-management-error">
+                  {renameError}
+                </div>
+              )}
+              <label htmlFor="event-name-input">Event name</label>
+              <input
+                id="event-name-input"
+                className="input"
+                type="text"
+                maxLength={200}
+                value={eventNameInput}
+                onChange={(e) => setEventNameInput(e.target.value)}
+                disabled={isRenaming}
+                autoFocus
+              />
+            </div>
+
+            <div className="event-management-actions p-7">
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => setShowRenameModal(false)}
+                disabled={isRenaming}
+              >
+                Cancel
+              </button>
+              <button type="submit" className="btn btn-primary" disabled={isRenaming}>
+                {isRenaming ? <Loader2 size={16} className="animate-spin" /> : <Pencil size={16} />}
+                <span>{isRenaming ? 'Saving...' : 'Save name'}</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {showDeleteModal && selectedEvent && (
+        <div className="event-management-overlay" role="dialog" aria-modal="true" aria-labelledby="delete-event-heading">
+          <button
+            type="button"
+            className="event-management-backdrop"
+            aria-label="Close delete event"
+            onClick={() => setShowDeleteModal(false)}
+            tabIndex={-1}
+          />
+          <div className="event-management-modal event-delete-modal">
+            <div className="event-management-header">
+              <div>
+                <h2 id="delete-event-heading">Delete event</h2>
+                <p>Permanently delete &quot;{selectedEvent.name}&quot;?</p>
+              </div>
+              <button
+                type="button"
+                className="btn btn-secondary event-members-close"
+                onClick={() => setShowDeleteModal(false)}
+                aria-label="Close delete event"
+                disabled={isDeleting}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="event-management-body">
+              {deleteError && (
+                <div role="alert" className="event-management-error">
+                  {deleteError}
+                </div>
+              )}
+              <p className="event-delete-warning">
+                This removes the event, memberships, photos, and favorites. This action cannot be undone.
+              </p>
+            </div>
+
+            <div className="event-management-actions">
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => setShowDeleteModal(false)}
+                disabled={isDeleting}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn btn-danger"
+                onClick={handleDeleteEvent}
+                disabled={isDeleting}
+              >
+                {isDeleting ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+                <span>{isDeleting ? 'Deleting...' : 'Delete event'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Manual Join Modal */}
       {showJoinModal && (

@@ -96,6 +96,7 @@ This app manages events and memberships.
 It provides:
 
 - Event creation, listing, retrieval, updates, and deletion.
+- Owner event renaming and complete event deletion.
 - Owner and member roles.
 - Event joining by invite code.
 - Public invite preview.

@@ -101,6 +101,11 @@ class EventDetailView(APIView):
             return Response({"detail": "Event not found."}, status=status.HTTP_404_NOT_FOUND)
 
         self.check_object_permissions(request, event)
+
+        from apps.photos.models import Photo
+        for photo in Photo.objects(event=event):
+            photo.delete()
+
         Membership.objects(event=event).delete()
         event.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)

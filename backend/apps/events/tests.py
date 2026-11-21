@@ -9,6 +9,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.accounts.models import User
 from apps.events.models import Event, Membership
+from apps.photos.models import Photo
 
 
 @pytest.fixture(autouse=True)
@@ -18,11 +19,13 @@ def setup_test_db():
     mongoengine.connect("test_events_db", host="localhost", mongo_client_class=mongomock.MongoClient)
     Event.drop_collection()
     Membership.drop_collection()
+    Photo.drop_collection()
     User.drop_collection()
     cache.clear()
     yield
     Event.drop_collection()
     Membership.drop_collection()
+    Photo.drop_collection()
     User.drop_collection()
     cache.clear()
     mongoengine.disconnect()
@@ -263,13 +266,26 @@ class TestEventDeletePermissions:
         client = auth_client_for(owner)
         res = client.post("/api/events/", {"name": "Event To Delete"}, format="json")
         event_id = res.data["id"]
+        event = Event.objects.get(id=event_id)
+        Photo(
+            event=event,
+            uploader=owner,
+            original_file="photos/test-original.jpg",
+            thumbnail="photos/test-thumbnail.jpg",
+            medium_preview="photos/test-medium.jpg",
+            width=1200,
+            height=800,
+            taken_at=datetime.utcnow(),
+            size_bytes=1024,
+        ).save()
 
         del_res = client.delete(f"/api/events/{event_id}/")
         assert del_res.status_code == status.HTTP_204_NO_CONTENT
 
-        # Verify event and memberships are gone
+        # Verify event, memberships, and photo records are gone
         assert Event.objects(id=event_id).first() is None
         assert Membership.objects(event=event_id).count() == 0
+        assert Photo.objects(event=event_id).count() == 0
 
     def test_delete_event_as_regular_member_returns_403(self):
         owner = create_user("owner@example.com")

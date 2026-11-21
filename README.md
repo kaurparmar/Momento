@@ -8,6 +8,7 @@ filter, select, and download photos.
 
 - Register and log in with JWT authentication.
 - Create events with names, descriptions, and optional start and end dates.
+- Rename or delete events as the owner.
 - Join events using an invite code or public invite link.
 - Upload multiple JPEG, PNG, or WebP photos at full resolution.
 - Generate thumbnail and medium previews while preserving original files.
@@ -104,6 +105,7 @@ Open `http://localhost:5173`. The Vite configuration forwards `/api` and `/media
 
 - Every event has one owner.
 - Event owners can edit or delete events.
+- Owners can rename events and delete the event with all associated photos and memberships.
 - Event members can view photos and upload photos.
 - Only the owner can list members and revoke regular member access.
 - The owner cannot revoke their own membership.
