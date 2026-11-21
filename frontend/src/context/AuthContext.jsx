@@ -9,6 +9,46 @@ const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [theme, setTheme] = useState(() => {
+    let savedTheme = null;
+    try {
+      savedTheme = localStorage.getItem('theme');
+    } catch {
+      savedTheme = null;
+    }
+    if (savedTheme === 'light' || savedTheme === 'dark') {
+      return savedTheme;
+    }
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  });
+
+  // Apply the selected theme to the document and remember the user's choice.
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    try {
+      localStorage.setItem('theme', theme);
+    } catch {
+      // The document theme still applies when browser storage is unavailable.
+    }
+  }, [theme]);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const followSystemTheme = (event) => {
+      let savedTheme = null;
+      try {
+        savedTheme = localStorage.getItem('theme');
+      } catch {
+        savedTheme = null;
+      }
+      if (!savedTheme) {
+        setTheme(event.matches ? 'dark' : 'light');
+      }
+    };
+
+    mediaQuery.addEventListener('change', followSystemTheme);
+    return () => mediaQuery.removeEventListener('change', followSystemTheme);
+  }, []);
 
   // Check for an existing session token on initial mount and fetch user details
   useEffect(() => {
@@ -74,6 +114,10 @@ export function AuthProvider({ children }) {
     return updatedUser;
   };
 
+  const toggleTheme = () => {
+    setTheme((currentTheme) => (currentTheme === 'dark' ? 'light' : 'dark'));
+  };
+
   const value = {
     user,
     loading,
@@ -83,6 +127,8 @@ export function AuthProvider({ children }) {
     logout,
     updateProfile,
     deleteAccount,
+    theme,
+    toggleTheme,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

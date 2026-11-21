@@ -17,6 +17,21 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
       rel="stylesheet"
     />
+    <script>
+      (() => {
+        try {
+          const savedTheme = localStorage.getItem('theme');
+          const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          document.documentElement.dataset.theme =
+            savedTheme === 'light' || savedTheme === 'dark'
+              ? savedTheme
+              : (systemDark ? 'dark' : 'light');
+        } catch (_) {
+          document.documentElement.dataset.theme =
+            window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

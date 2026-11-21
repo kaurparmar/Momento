@@ -15,11 +15,13 @@ import {
   Loader2,
   Menu,
   X,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export default function Navbar() {
-  const { user, isAuthenticated, logout, deleteAccount } = useAuth();
+  const { user, isAuthenticated, logout, deleteAccount, theme, toggleTheme } = useAuth();
   const navigate = useNavigate();
 
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -86,6 +88,16 @@ export default function Navbar() {
             className={`site-navigation${isMenuOpen ? ' is-open' : ''}`}
             aria-label="Main navigation"
           >
+            <button
+              type="button"
+              className="btn theme-toggle"
+              onClick={toggleTheme}
+              aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+              title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+            >
+              {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+            </button>
+
             {isAuthenticated ? (
               <>
                 <Link

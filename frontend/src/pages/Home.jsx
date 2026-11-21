@@ -26,10 +26,22 @@ export default function Home() {
       <section
         style={{
           textAlign: 'left',
-          maxWidth: '720px',
+          maxWidth: '760px',
           marginBottom: 'var(--space-16)',
         }}
       >
+        <p
+          style={{
+            color: 'var(--color-accent)',
+            fontSize: '0.8125rem',
+            fontWeight: 700,
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase',
+            margin: '0 0 var(--space-3) 0',
+          }}
+        >
+          Shared event photo albums
+        </p>
         <h1
           style={{
             fontSize: '2.5rem',

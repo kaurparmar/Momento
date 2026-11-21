@@ -1,5 +1,5 @@
 # Event views for managing group events, memberships, and invite links.
-# Only members can view events, and only the owner can edit, delete, or regenerate codes.
+# Members can view events; owners can manage event settings, invite links, and membership.
 
 from bson import ObjectId
 from rest_framework import status
@@ -14,7 +14,9 @@ from apps.events.serializers import (
     EventSerializer,
     InvitePreviewSerializer,
     JoinEventSerializer,
+    MembershipSerializer,
 )
+from apps.accounts.models import User
 
 
 def get_event_or_none(pk):
@@ -102,6 +104,58 @@ class EventDetailView(APIView):
         Membership.objects(event=event).delete()
         event.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class EventMembersView(APIView):
+    permission_classes = [IsAuthenticated, IsEventOwner]
+
+    def get(self, request, pk):
+        event = get_event_or_none(pk)
+        if event is None:
+            return Response({"detail": "Event not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        self.check_object_permissions(request, event)
+        memberships = Membership.objects(event=event)
+        return Response(
+            MembershipSerializer(memberships, many=True).data,
+            status=status.HTTP_200_OK,
+        )
+
+
+class EventMemberRevokeView(APIView):
+    permission_classes = [IsAuthenticated, IsEventOwner]
+
+    def delete(self, request, pk, user_id):
+        event = get_event_or_none(pk)
+        if event is None:
+            return Response({"detail": "Event not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        self.check_object_permissions(request, event)
+
+        if not ObjectId.is_valid(user_id):
+            return Response({"detail": "Member not found in this event."}, status=status.HTTP_404_NOT_FOUND)
+
+        user = User.objects(id=ObjectId(user_id)).first()
+        membership = Membership.objects(user=user, event=event).first() if user else None
+        if membership is None:
+            return Response({"detail": "Member not found in this event."}, status=status.HTTP_404_NOT_FOUND)
+
+        if membership.role == Membership.ROLE_OWNER or str(user.id) == str(event.owner.id):
+            return Response(
+                {"detail": "The event owner cannot be removed."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        membership.delete()
+        event.invite_code = Event.generate_invite_code()
+        event.save()
+        return Response(
+            {
+                "detail": "Member access revoked and invite link regenerated.",
+                "invite_code": event.invite_code,
+            },
+            status=status.HTTP_200_OK,
+        )
 
 
 # Join view: Lets any logged-in user join an event using a valid invite code.

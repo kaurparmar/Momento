@@ -103,6 +103,16 @@ class JoinEventSerializer(serializers.Serializer):
     invite_code = serializers.CharField(required=True, trim_whitespace=True)
 
 
+class MembershipSerializer(serializers.Serializer):
+    """Member details exposed to the event owner."""
+
+    user_id = serializers.CharField(source="user.id", read_only=True)
+    email = serializers.EmailField(source="user.email", read_only=True)
+    display_name = serializers.CharField(source="user.display_name", read_only=True)
+    role = serializers.CharField(read_only=True)
+    joined_at = serializers.DateTimeField(read_only=True)
+
+
 class InvitePreviewSerializer(serializers.Serializer):
     """Public preview serializer returning event name and member count only."""
 

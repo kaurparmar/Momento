@@ -1,5 +1,5 @@
 // Events management page with desktop sidebar and mobile top bar.
-// Displays the list of events, dates, member counts, copy invite link button, and create event form.
+// Displays events and lets owners manage event members and invite links.
 
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -15,6 +15,8 @@ import {
   KeyRound,
   Shield,
   Search,
+  UserMinus,
+  UserRound,
 } from 'lucide-react';
 import { api } from '../api';
 import CreateEvent from './CreateEvent';
@@ -40,6 +42,166 @@ function formatDateRange(startDate, endDate) {
   }
 
   return `Ending ${new Date(endDate).toLocaleDateString(undefined, options)}`;
+}
+
+function EventMembersPanel({ eventId, eventName, onMemberRevoked }) {
+  const [members, setMembers] = useState([]);
+  const [membersLoading, setMembersLoading] = useState(true);
+  const [membersError, setMembersError] = useState('');
+  const [revokingMemberId, setRevokingMemberId] = useState(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    api.get(`/events/${eventId}/members/`)
+      .then((data) => {
+        if (isMounted) {
+          setMembers(Array.isArray(data) ? data : []);
+        }
+      })
+      .catch((err) => {
+        if (isMounted) {
+          setMembersError(err.message || 'Failed to load event members.');
+        }
+      })
+      .finally(() => {
+        if (isMounted) {
+          setMembersLoading(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [eventId]);
+
+  const handleRevokeMember = async (member) => {
+    const memberName = member.display_name || member.email;
+    if (!window.confirm(
+      `Remove ${memberName} from "${eventName}"? This will revoke their access and replace the invite link. Anyone using the old link will need the new one.`
+    )) {
+      return;
+    }
+
+    setRevokingMemberId(member.user_id);
+    setMembersError('');
+    try {
+      const response = await api.delete(`/events/${eventId}/members/${member.user_id}/`);
+      setMembers((previous) => previous.filter((item) => item.user_id !== member.user_id));
+      onMemberRevoked(eventId, response.invite_code);
+    } catch (err) {
+      setMembersError(err.message || 'Failed to revoke member access.');
+    } finally {
+      setRevokingMemberId(null);
+    }
+  };
+
+  return (
+    <section
+      aria-labelledby="event-members-heading"
+      style={{
+        marginBottom: 'var(--space-6)',
+        padding: 'var(--space-4)',
+        border: '1px solid var(--color-border)',
+        borderRadius: 'var(--radius-md)',
+        backgroundColor: 'var(--color-bg)',
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 'var(--space-3)',
+          marginBottom: 'var(--space-3)',
+        }}
+      >
+        <h2
+          id="event-members-heading"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 'var(--space-2)',
+            margin: 0,
+            fontSize: '1rem',
+            fontWeight: 600,
+            color: 'var(--color-text)',
+          }}
+        >
+          <Users size={18} />
+          Members ({members.length})
+        </h2>
+      </div>
+
+      {membersError && (
+        <div role="alert" style={{ color: 'var(--color-danger)', fontSize: '0.8125rem', marginBottom: 'var(--space-3)' }}>
+          {membersError}
+        </div>
+      )}
+
+      {membersLoading ? (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>
+          <Loader2 size={16} className="animate-spin" />
+          <span>Loading members...</span>
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gap: 'var(--space-2)' }}>
+          {members.map((member) => (
+            <div
+              key={member.user_id}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 'var(--space-3)',
+                padding: 'var(--space-2) 0',
+                borderTop: '1px solid var(--color-border)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', minWidth: 0 }}>
+                <UserRound size={18} style={{ flexShrink: 0, color: 'var(--color-text-muted)' }} />
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ color: 'var(--color-text)', fontSize: '0.875rem', fontWeight: 500 }}>
+                    {member.display_name || member.email}
+                    {member.role === 'owner' && (
+                      <span style={{ color: 'var(--color-text-muted)', fontWeight: 400 }}> (owner)</span>
+                    )}
+                  </div>
+                  <div style={{ color: 'var(--color-text-muted)', fontSize: '0.75rem', overflowWrap: 'anywhere' }}>
+                    {member.email}
+                  </div>
+                </div>
+              </div>
+
+              {member.role !== 'owner' && (
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  aria-label={`Revoke access for ${member.display_name || member.email}`}
+                  title="Revoke access"
+                  disabled={revokingMemberId !== null}
+                  onClick={() => handleRevokeMember(member)}
+                  style={{
+                    flexShrink: 0,
+                    padding: '0.375rem 0.625rem',
+                    fontSize: '0.75rem',
+                    color: 'var(--color-danger)',
+                  }}
+                >
+                  {revokingMemberId === member.user_id ? (
+                    <Loader2 size={14} className="animate-spin" />
+                  ) : (
+                    <UserMinus size={14} />
+                  )}
+                  <span>Revoke</span>
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  );
 }
 
 export default function Events() {
@@ -646,6 +808,29 @@ export default function Events() {
                   </p>
                 )}
               </div>
+
+              {selectedEvent.my_role === 'owner' && (
+                <EventMembersPanel
+                  key={selectedEvent.id || selectedEvent.pk}
+                  eventId={selectedEvent.id || selectedEvent.pk}
+                  eventName={selectedEvent.name}
+                  onMemberRevoked={(eventId, inviteCode) =>
+                    setEvents((previous) =>
+                      previous.map((event) => {
+                        const currentId = event.id || event.pk;
+                        if (String(currentId) !== String(eventId)) {
+                          return event;
+                        }
+                        return {
+                          ...event,
+                          member_count: Math.max(0, (event.member_count || 0) - 1),
+                          invite_code: inviteCode,
+                        };
+                      })
+                    )
+                  }
+                />
+              )}
 
               {/* Event Photos Gallery */}
               <PhotoGallery

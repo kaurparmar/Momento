@@ -195,11 +195,48 @@ export default function PhotoGallery({ eventId }) {
       const next = new Set(prev);
       if (next.has(photoId)) {
         next.delete(photoId);
-      } else {
-        next.add(photoId);
+        return next;
       }
+      if (next.size >= 50) {
+        return next;
+      }
+      next.add(photoId);
       return next;
     });
+
+    if (selectedIds.has(photoId)) {
+      setZipError('');
+    } else if (selectedIds.size >= 50) {
+      setZipError('Maximum 50 photos can be selected for a single zip archive.');
+    } else {
+      setZipError('');
+    }
+  };
+
+  const allVisiblePhotosSelected =
+    photos.length > 0 && photos.every((photo) => selectedIds.has(photo.id));
+
+  const handleToggleSelectAll = () => {
+    const next = new Set(selectedIds);
+
+    if (allVisiblePhotosSelected) {
+      photos.forEach((photo) => next.delete(photo.id));
+      setZipError('');
+    } else {
+      const missingVisibleIds = photos
+        .map((photo) => photo.id)
+        .filter((photoId) => !next.has(photoId));
+      const availableSlots = Math.max(0, 50 - next.size);
+
+      missingVisibleIds.slice(0, availableSlots).forEach((photoId) => next.add(photoId));
+
+      if (missingVisibleIds.length > availableSlots) {
+        setZipError('Maximum 50 photos can be selected for a single zip archive.');
+      } else {
+        setZipError('');
+      }
+    }
+    setSelectedIds(next);
   };
 
   // Clear all selections
@@ -503,6 +540,17 @@ export default function PhotoGallery({ eventId }) {
           marginBottom: 'var(--space-6)',
         }}
       >
+        {photos.length > 0 && (
+          <button
+            type="button"
+            onClick={handleToggleSelectAll}
+            className={`filter-tag ${allVisiblePhotosSelected ? 'filter-tag-active' : ''}`}
+            aria-pressed={allVisiblePhotosSelected}
+          >
+            {allVisiblePhotosSelected ? <Square size={13} /> : <CheckSquare size={13} />}
+            <span>{allVisiblePhotosSelected ? 'Deselect all' : 'Select all'}</span>
+          </button>
+        )}
         <button
           type="button"
           onClick={() => setActiveFilter('all')}

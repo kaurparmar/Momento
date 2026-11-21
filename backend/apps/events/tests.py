@@ -398,6 +398,113 @@ class TestLeaveEvent:
         assert leave_res.status_code == status.HTTP_400_BAD_REQUEST
 
 
+class TestEventMembers:
+    def test_owner_can_list_event_members(self):
+        owner = create_user("owner@example.com", "Owner")
+        owner_client = auth_client_for(owner)
+        event_response = owner_client.post("/api/events/", {"name": "Shared Event"}, format="json")
+        event_id = event_response.data["id"]
+
+        member = create_user("member@example.com", "Member")
+        member_client = auth_client_for(member)
+        member_client.post(
+            "/api/events/join/",
+            {"invite_code": event_response.data["invite_code"]},
+            format="json",
+        )
+
+        response = owner_client.get(f"/api/events/{event_id}/members/")
+
+        assert response.status_code == status.HTTP_200_OK
+        assert {item["email"] for item in response.data} == {
+            "owner@example.com",
+            "member@example.com",
+        }
+        assert {item["role"] for item in response.data} == {
+            Membership.ROLE_OWNER,
+            Membership.ROLE_MEMBER,
+        }
+        member_data = next(item for item in response.data if item["email"] == "member@example.com")
+        assert member_data["user_id"] == str(member.id)
+        assert member_data["display_name"] == "Member"
+
+    def test_only_owner_can_list_event_members(self):
+        owner = create_user("owner@example.com")
+        owner_client = auth_client_for(owner)
+        event_response = owner_client.post("/api/events/", {"name": "Shared Event"}, format="json")
+        member = create_user("member@example.com")
+        member_client = auth_client_for(member)
+        member_client.post(
+            "/api/events/join/",
+            {"invite_code": event_response.data["invite_code"]},
+            format="json",
+        )
+
+        response = member_client.get(f"/api/events/{event_response.data['id']}/members/")
+
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+
+    def test_owner_can_revoke_member_access(self):
+        owner = create_user("owner@example.com")
+        owner_client = auth_client_for(owner)
+        event_response = owner_client.post("/api/events/", {"name": "Shared Event"}, format="json")
+        event_id = event_response.data["id"]
+        member = create_user("member@example.com")
+        member_client = auth_client_for(member)
+        member_client.post(
+            "/api/events/join/",
+            {"invite_code": event_response.data["invite_code"]},
+            format="json",
+        )
+
+        response = owner_client.delete(f"/api/events/{event_id}/members/{member.id}/")
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["invite_code"] != event_response.data["invite_code"]
+        assert Membership.objects(user=member, event=Event.objects.get(id=event_id)).first() is None
+        assert member_client.get(f"/api/events/{event_id}/").status_code == status.HTTP_403_FORBIDDEN
+        assert APIClient().get(
+            f"/api/events/invite/{event_response.data['invite_code']}/"
+        ).status_code == status.HTTP_404_NOT_FOUND
+
+    def test_owner_cannot_revoke_own_access(self):
+        owner = create_user("owner@example.com")
+        client = auth_client_for(owner)
+        event_response = client.post("/api/events/", {"name": "Owner Event"}, format="json")
+
+        response = client.delete(
+            f"/api/events/{event_response.data['id']}/members/{owner.id}/"
+        )
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert Membership.objects(user=owner).count() == 1
+
+    def test_non_owner_cannot_revoke_member_access(self):
+        owner = create_user("owner@example.com")
+        owner_client = auth_client_for(owner)
+        event_response = owner_client.post("/api/events/", {"name": "Shared Event"}, format="json")
+        member = create_user("member@example.com")
+        member_client = auth_client_for(member)
+        member_client.post(
+            "/api/events/join/",
+            {"invite_code": event_response.data["invite_code"]},
+            format="json",
+        )
+        another_member = create_user("another@example.com")
+        auth_client_for(another_member).post(
+            "/api/events/join/",
+            {"invite_code": event_response.data["invite_code"]},
+            format="json",
+        )
+
+        response = member_client.delete(
+            f"/api/events/{event_response.data['id']}/members/{another_member.id}/"
+        )
+
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert Membership.objects(user=another_member).first() is not None
+
+
 class TestRegenerateInviteCode:
     def test_regenerate_invite_code_as_owner(self):
         owner = create_user("owner@example.com")
