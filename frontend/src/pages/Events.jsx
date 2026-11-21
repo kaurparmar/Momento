@@ -128,7 +128,7 @@ function EventMembersPanel({ eventId, eventName, onMemberRevoked, onClose }) {
         onClick={onClose}
         tabIndex={-1}
       />
-      <section className="event-members-modal">
+      <section className="event-members-modal p-4">
         <div className="event-members-modal-header">
           <h2 id="event-members-heading">
             <Users size={18} />
@@ -145,7 +145,7 @@ function EventMembersPanel({ eventId, eventName, onMemberRevoked, onClose }) {
           </button>
         </div>
 
-        <div className="event-members-modal-body">
+        <div className="event-members-modal-body p-7">
           {membersError && (
             <div role="alert" className="event-members-error">
               {membersError}
@@ -153,7 +153,7 @@ function EventMembersPanel({ eventId, eventName, onMemberRevoked, onClose }) {
           )}
 
           {membersLoading ? (
-            <div className="event-members-loading">
+            <div className="event-members-loading p-4">
               <Loader2 size={16} className="animate-spin" />
               <span>Loading members...</span>
             </div>
@@ -1148,8 +1148,8 @@ export default function Events() {
             onClick={() => setShowDeleteModal(false)}
             tabIndex={-1}
           />
-          <div className="event-management-modal event-delete-modal">
-            <div className="event-management-header">
+          <div className="event-management-modal event-delete-modal p-7">
+            <div className="event-management-header p-4">
               <div>
                 <h2 id="delete-event-heading">Delete event</h2>
                 <p>Permanently delete &quot;{selectedEvent.name}&quot;?</p>
@@ -1165,7 +1165,7 @@ export default function Events() {
               </button>
             </div>
 
-            <div className="event-management-body">
+            <div className="event-management-body p-4">
               {deleteError && (
                 <div role="alert" className="event-management-error">
                   {deleteError}
@@ -1176,7 +1176,7 @@ export default function Events() {
               </p>
             </div>
 
-            <div className="event-management-actions">
+            <div className="event-management-actions p-4">
               <button
                 type="button"
                 className="btn btn-secondary"
